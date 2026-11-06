@@ -115,12 +115,14 @@ function closeSheet(id) { document.getElementById(id).classList.remove('open'); 
 /* ================= วันที่ในฟอร์ม ================= */
 function updateDateLabel() {
   el.dateLabel.textContent = fmtShort(state.entryDate);
-  if (document.activeElement !== el.inDate) el.inDate.value = toInputValue(state.entryDate);
+  try {
+    el.inDate.value = toInputValue(state.entryDate);
+  } catch {}
   fitAll(el.dateLabel.parentElement);
 }
 function resetEntryDate() { state.entryDate = Date.now(); state.dateTouched = false; updateDateLabel(); }
 function onDateChange() {
-  if (!el.inDate.value) return resetEntryDate();
+  if (!el.inDate.value) return;
   state.entryDate = fromInputValue(el.inDate.value, state.entryDate);
   state.dateTouched = true;
   updateDateLabel();
@@ -226,24 +228,25 @@ async function handleSlip(e) {
   const file = e.target.files?.[0];
   e.target.value = '';                  // ไม่เก็บไฟล์ไว้
   if (!file) return;
+  state.dateTouched = true;             // ล็อกไว้ทันทีเพื่อไม่ให้ visibilitychange หรือ timer มารีเซ็ต
   showLoader('กำลังเตรียมรูป…', 0);
   try {
     const r = await scanSlip(file, (m) => showLoader(OCR_STATUS[m.status] || 'กำลังประมวลผล…', m.progress));
     const got = [];
-    if (r.date) {
+    if (r.date && !isNaN(r.date.getTime())) {
       state.entryDate = r.date.getTime();
       state.dateTouched = true;
       updateDateLabel();
       retrigger(el.dateLabel.closest('.date-field'), 'flash');
-      got.push('วันที่');
+      got.push(`วันที่ (${fmtShort(state.entryDate)})`);
     }
     if (r.amount != null) {
       el.inAmount.value = Number.isInteger(r.amount) ? String(r.amount) : r.amount.toFixed(2);
       retrigger(el.inAmount, 'flash');
-      got.push('จำนวนเงิน');
+      got.push(`ยอดเงิน (${money(r.amount)})`);
     }
     toast(got.length
-      ? `ดึง${got.join('และ')}แล้ว พิมพ์รายการแล้วกดบันทึกได้เลย`
+      ? `ดึง${got.join(' และ ')}แล้ว พิมพ์รายการแล้วกดบันทึกได้เลย`
       : 'อ่านข้อมูลไม่ได้ ลองใช้รูปสลิปที่ชัดขึ้น');
   } catch (err) {
     console.error(err);
@@ -781,7 +784,7 @@ function bind() {
   el.csDisconnect.addEventListener('click', disconnectCloud);
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && !state.dateTouched) resetEntryDate();
+    // ไม่รีเซ็ตวันที่อัตโนมัติ เพื่อป้องกันการรีเซ็ตทับวันที่สลิปเวลากลับเข้ามาจากหน้าต่างเลือกรูป
   });
 }
 

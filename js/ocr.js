@@ -36,7 +36,7 @@ function scheduleTerminate() {
   }, 120000);
 }
 
-// ย่อ/ขยายรูป + ทำขาวดำ + เพิ่มคอนทราสต์ ให้ OCR อ่านแม่นขึ้น
+// ปรับขนาดรูปให้พอเหมาะสำหรับ OCR โดยคงความคมชัดของตัวหนังสือและวรรณยุกต์ไทย
 async function fileToCanvas(file) {
   const url = URL.createObjectURL(file);
   try {
@@ -46,7 +46,7 @@ async function fileToCanvas(file) {
       i.onerror = () => rej(new Error('เปิดรูปไม่ได้'));
       i.src = url;
     });
-    const scale = Math.min(2, 1500 / img.naturalWidth);
+    const scale = Math.min(2.5, 1600 / img.naturalWidth);
     const w = Math.round(img.naturalWidth * scale);
     const h = Math.round(img.naturalHeight * scale);
     const c = document.createElement('canvas');
@@ -54,15 +54,6 @@ async function fileToCanvas(file) {
     c.height = h;
     const ctx = c.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h);
-    const p = data.data;
-    for (let i = 0; i < p.length; i += 4) {
-      let g = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
-      g = (g - 128) * 1.35 + 128;
-      g = g < 0 ? 0 : g > 255 ? 255 : g;
-      p[i] = p[i + 1] = p[i + 2] = g;
-    }
-    ctx.putImageData(data, 0, 0);
     return c;
   } finally {
     URL.revokeObjectURL(url);
@@ -146,11 +137,13 @@ function extractTime(lineOrText) {
   return null;
 }
 
+const TH_MONTH_PATTERN = 'ม\\.?\\s*ค|ก\\.?\\s*พ|มี\\.?\\s*ค|เม\\.?\\s*ย|พ\\.?\\s*ค|มิ\\.?\\s*ย|ก\\.?\\s*ค|ส\\.?\\s*ค|ก\\.?\\s*ย|ต\\.?\\s*ค|พ\\.?\\s*ย|ธ\\.?\\s*ค|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+
 function parseDate(text) {
   let d = 0, m = -1, y = 0;
 
-  // 1. วัน เดือน ปี (เช่น 4 พ.ย. 69, 04 พ.ย. 2569, 4 พ.ย. พ.ศ. 2569, 4 พ.ย.69, 4 Nov 2026)
-  const thaiDateRegex = /(?:^|[^\d])(\d{1,2})\s*([A-Za-z\u0E00-\u0E7F][A-Za-z\u0E00-\u0E7F.\s]{0,20}?)\s*(?:พ\.?ศ\.?\s*|ค\.?ศ\.?\s*)?(\d{4}|\d{2})(?!\d)/g;
+  // 1. วัน เดือน ปี (เช่น 4 พ.ย. 69, 04 พ.ย. 69, 4 พ.ย. 2569, 4 พ.ย. พ.ศ. 2569, 4 พ.ย.69, 4 Nov 2026)
+  const thaiDateRegex = new RegExp(`(?:^|[^\\d])(\\d{1,2})\\s*(${TH_MONTH_PATTERN})[.\\s]*(?:พ\\.?ศ\\.?\\s*|ค\\.?ศ\\.?\\s*)?(\\d{4}|\\d{2})(?!\\d)`, 'gi');
   for (const match of text.matchAll(thaiDateRegex)) {
     const mi = monthIndex(match[2]);
     const day = +match[1];
