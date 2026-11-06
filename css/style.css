@@ -78,6 +78,20 @@ input { font: inherit; }
 .clay-ico.sm { width: 34px; height: 34px; border-radius: 11px; font-size: 18px; }
 .clay-ico.lg { width: 62px; height: 62px; border-radius: 20px; font-size: 32px; }
 
+/* ---------- ไอคอนลายเส้นขาวดำ ---------- */
+.line-ico {
+  display: inline-block;
+  vertical-align: middle;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  flex: none;
+}
+.clay-ico { color: var(--text); }
+.clay-ico .line-ico { stroke: var(--text); }
+
 .clay-btn {
   border: none; border-radius: 13px;
   background: color-mix(in srgb, #fff 55%, var(--primary));

@@ -15,7 +15,29 @@ const THEMES = {
   sage:     { name: 'เซจ',       primary: '#bcd9a8', deep: '#6f9f52' },
   lilac:    { name: 'ไลแลค',     primary: '#e2b6ee', deep: '#a65cbf' },
 };
-const ICONS = ['👛', '💰', '🏦', '💳', '🐷', '💵', '🎁', '🛒', '🏠', '✈️'];
+const WALLET_ICONS = {
+  wallet: '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0z"/><path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>',
+  card:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+  bank:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="5 6 12 3 19 6"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/><line x1="8" y1="14" x2="8" y2="17"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="16" y1="14" x2="16" y2="17"/></svg>',
+  coins:  '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.5 9h-4a1.5 1.5 0 0 0 0 3h3a1.5 1.5 0 0 1 0 3h-4"/><line x1="12" y1="7" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="17"/></svg>',
+  cash:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>',
+  tag:    '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+  cart:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+  home:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  plane:  '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.7-.1-1.3.2-1.6.8l-.6 1.1 5.3 3.8-3.4 3.4-2.4-.7-.9.5 2 2 2 2 .5-.9-.7-2.4 3.4-3.4 3.8 5.3 1.1-.6c.6-.3.9-.9.8-1.6z"/></svg>',
+  star:   '<svg class="line-ico" width="20" height="20" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+};
+const LEGACY_MAP = {
+  '👛': 'wallet', '💰': 'coins', '🏦': 'bank', '💳': 'card', '🐷': 'coins',
+  '💵': 'cash', '🎁': 'tag', '🛒': 'cart', '🏠': 'home', '✈️': 'plane'
+};
+function renderWalletIcon(key) {
+  if (WALLET_ICONS[key]) return WALLET_ICONS[key];
+  const mapped = LEGACY_MAP[key];
+  if (mapped && WALLET_ICONS[mapped]) return WALLET_ICONS[mapped];
+  return WALLET_ICONS.wallet;
+}
+const ICONS = Object.keys(WALLET_ICONS);
 const PAGE = 150;
 const OCR_STATUS = {
   'loading tesseract core': 'กำลังโหลดตัวอ่านสลิป…',
@@ -120,7 +142,9 @@ function renderList() {
       <div class="pill in ${isIn ? '' : 'zero'}">${fitHTML(isIn ? money(t.amount) : '0', 'right')}</div>
       <div class="pill out ${isIn ? 'zero' : ''}">${fitHTML(isIn ? '0' : money(t.amount), 'right')}</div>
       <div class="pill bal ${bal < 0 ? 'neg' : ''}">${fitHTML(money(bal), 'right')}</div>
-      <button class="edit-btn" data-edit="${t.id}" aria-label="แก้ไขรายการ" title="แก้ไข">✏️</button>
+      <button class="edit-btn" data-edit="${t.id}" aria-label="แก้ไขรายการ" title="แก้ไข">
+        <svg class="line-ico" width="13" height="13" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
     </li>`;
   }).join('');
 
@@ -248,9 +272,11 @@ async function renderWallets() {
   el.walletList.innerHTML = state.wallets.map((w) => {
     const t = THEMES[w.theme] || THEMES.mint;
     return `<li class="wallet-item ${w.id === state.currentId ? 'active' : ''}" data-id="${w.id}" style="--wp:${t.primary};--wd:${t.deep}">
-      <span class="clay-ico sm">${w.icon || '👛'}</span>
+      <span class="clay-ico sm">${renderWalletIcon(w.icon)}</span>
       <span class="w-meta">${fitHTML(w.name, 'w-name')}${fitHTML(`คงเหลือ ${money(sums[w.id] || 0)} บาท`, 'w-bal')}</span>
-      <button class="w-edit" data-edit="${w.id}" aria-label="แก้ไขกระเป๋า">✏️</button>
+      <button class="w-edit" data-edit="${w.id}" aria-label="แก้ไขกระเป๋า">
+        <svg class="line-ico" width="14" height="14" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
     </li>`;
   }).join('');
   fitAll(el.walletList);
@@ -279,14 +305,14 @@ function renderPickers() {
     `<button type="button" class="swatch ${k === d.theme ? 'sel' : ''}" data-theme="${k}" style="--wp:${th.primary};--wd:${th.deep}"><i></i><span>${th.name}</span></button>`
   ).join('');
   el.wsIcons.innerHTML = ICONS.map((i) =>
-    `<button type="button" class="clay-ico ${i === d.icon ? 'sel' : ''}" data-icon="${i}" style="--wp:${t.primary};--wd:${t.deep}">${i}</button>`
+    `<button type="button" class="clay-ico ${i === d.icon ? 'sel' : ''}" data-icon="${i}" style="--wp:${t.primary};--wd:${t.deep}">${renderWalletIcon(i)}</button>`
   ).join('');
 }
 function openWalletSheet(id) {
   const w = id ? state.wallets.find((x) => x.id === id) : null;
   const keys = Object.keys(THEMES);
   state.editWalletId = w ? w.id : null;
-  state.draft = { theme: w?.theme || keys[state.wallets.length % keys.length], icon: w?.icon || '👛' };
+  state.draft = { theme: w?.theme || keys[state.wallets.length % keys.length], icon: w?.icon || 'wallet' };
   el.wsTitle.textContent = w ? 'แก้ไขกระเป๋า' : 'เพิ่มกระเป๋าใหม่';
   el.wsName.value = w?.name || '';
   el.wsDelete.hidden = !w;
@@ -357,10 +383,30 @@ function openSummary() {
   el.sumTitle.textContent = `สรุปภาพรวม · ${w.name}`;
   el.sumBody.innerHTML = `
     <div class="sum-cards">
-      <div class="sum-card in"><span class="clay-ico sm" style="--wp:#a8e6bd;--wd:#3ea765">📥</span><small>รายรับรวม</small>${fitHTML(money(tin), 'big')}</div>
-      <div class="sum-card out"><span class="clay-ico sm" style="--wp:#f7b9b9;--wd:#d45a5a">📤</span><small>รายจ่ายรวม</small>${fitHTML(money(tout), 'big')}</div>
-      <div class="sum-card ${bal < 0 ? 'neg' : ''}"><span class="clay-ico sm">💰</span><small>คงเหลือ</small>${fitHTML(money(bal), 'big')}</div>
-      <div class="sum-card"><span class="clay-ico sm">🧾</span><small>จำนวนรายการ</small>${fitHTML(`${state.txs.length} รายการ`, 'big')}</div>
+      <div class="sum-card in">
+        <span class="clay-ico sm" style="--wp:#a8e6bd;--wd:#3ea765">
+          <svg class="line-ico" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+        </span>
+        <small>รายรับรวม</small>${fitHTML(money(tin), 'big')}
+      </div>
+      <div class="sum-card out">
+        <span class="clay-ico sm" style="--wp:#f7b9b9;--wd:#d45a5a">
+          <svg class="line-ico" width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </span>
+        <small>รายจ่ายรวม</small>${fitHTML(money(tout), 'big')}
+      </div>
+      <div class="sum-card ${bal < 0 ? 'neg' : ''}">
+        <span class="clay-ico sm">
+          <svg class="line-ico" width="16" height="16" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M16 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0z"/><path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>
+        </span>
+        <small>คงเหลือ</small>${fitHTML(money(bal), 'big')}
+      </div>
+      <div class="sum-card">
+        <span class="clay-ico sm">
+          <svg class="line-ico" width="16" height="16" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+        </span>
+        <small>จำนวนรายการ</small>${fitHTML(`${state.txs.length} รายการ`, 'big')}
+      </div>
     </div>
     <p class="sec-title">สรุปรายเดือน</p>
     ${list.length ? list.map((m) => {
@@ -495,7 +541,7 @@ async function handleCSVImport(e) {
       id: wId,
       name: walletName,
       theme: 'mint',
-      icon: '👛',
+      icon: 'wallet',
       createdAt: Date.now(),
     };
 
@@ -724,7 +770,7 @@ async function init() {
 
   state.wallets = await DB.getWallets();
   if (!state.wallets.length) {
-    const w = { id: uid(), name: 'กระเป๋าหลัก', theme: 'mint', icon: '👛', createdAt: Date.now() };
+    const w = { id: uid(), name: 'กระเป๋าหลัก', theme: 'mint', icon: 'wallet', createdAt: Date.now() };
     await DB.putWallet(w);
     state.wallets = [w];
   }
