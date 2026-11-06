@@ -73,7 +73,7 @@
   <div class="backdrop" id="backdrop"></div>
   <aside class="drawer" id="drawer" aria-label="เมนูกระเป๋าเงิน">
     <div class="drawer-head">
-      <div class="clay-ico">💰</div>
+      <img src="icons/icon-192.png" alt="MyMoney" class="app-logo-ico" />
       <div class="brand"><b>MyMoney</b><small>บัญชีรายรับ–รายจ่าย</small></div>
       <button class="close-btn" id="btnCloseDrawer" aria-label="ปิด">✕</button>
     </div>
@@ -93,8 +93,10 @@
       <label class="switch"><input type="checkbox" id="tglDark" /><span></span></label>
     </div>
     <button class="setting" id="btnBackup"><span class="clay-ico xs">💾</span><span class="grow">ส่งออกไฟล์สำรอง</span></button>
-    <label class="setting" for="inRestore"><span class="clay-ico xs">📂</span><span class="grow">กู้คืนจากไฟล์</span></label>
+    <label class="setting" for="inRestore"><span class="clay-ico xs">📂</span><span class="grow">กู้คืนจากไฟล์ (JSON)</span></label>
     <input type="file" id="inRestore" accept="application/json,.json" class="sr-only" />
+    <label class="setting" for="inCSV"><span class="clay-ico xs">📑</span><span class="grow">นำเข้าจาก CSV (แอปเดิม)</span></label>
+    <input type="file" id="inCSV" accept=".csv,text/csv" class="sr-only" />
     <p class="drawer-foot" id="drawerFoot">ข้อมูลเก็บในเครื่องนี้เท่านั้น</p>
   </aside>
 

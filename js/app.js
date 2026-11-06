@@ -32,7 +32,7 @@ const el = {
   dateLabel: $('#dateLabel'), inDate: $('#inDate'), inSlip: $('#inSlip'), inTitle: $('#inTitle'), inAmount: $('#inAmount'),
   btnIncome: $('#btnIncome'), btnExpense: $('#btnExpense'), list: $('#txList'), empty: $('#empty'), btnMore: $('#btnMore'),
   drawer: $('#drawer'), backdrop: $('#backdrop'), btnCloseDrawer: $('#btnCloseDrawer'), walletList: $('#walletList'),
-  btnAddWallet: $('#btnAddWallet'), tglDark: $('#tglDark'), btnBackup: $('#btnBackup'), inRestore: $('#inRestore'),
+  btnAddWallet: $('#btnAddWallet'), tglDark: $('#tglDark'), btnBackup: $('#btnBackup'), inRestore: $('#inRestore'), inCSV: $('#inCSV'),
   btnCloud: $('#btnCloud'), cloudLabel: $('#cloudLabel'), cloudDot: $('#cloudDot'), drawerFoot: $('#drawerFoot'),
   csStatus: $('#csStatus'), csUrl: $('#csUrl'), csKey: $('#csKey'), csConnect: $('#csConnect'),
   csSyncNow: $('#csSyncNow'), csPull: $('#csPull'), csDisconnect: $('#csDisconnect'), csActions: $('#csActions'),
@@ -120,7 +120,7 @@ function renderList() {
       <div class="pill in ${isIn ? '' : 'zero'}">${fitHTML(isIn ? money(t.amount) : '0', 'right')}</div>
       <div class="pill out ${isIn ? 'zero' : ''}">${fitHTML(isIn ? '0' : money(t.amount), 'right')}</div>
       <div class="pill bal ${bal < 0 ? 'neg' : ''}">${fitHTML(money(bal), 'right')}</div>
-      <button class="del" data-del="${t.id}" aria-label="ลบรายการ">✕</button>
+      <button class="edit-btn" data-edit="${t.id}" aria-label="แก้ไขรายการ" title="แก้ไข">✏️</button>
     </li>`;
   }).join('');
 
@@ -158,6 +158,7 @@ async function deleteTx(id) {
   state.txs = state.txs.filter((x) => x.id !== id);
   renderList();
   await DB.deleteTx(id);
+  await renderWallets();
   toast('ลบรายการแล้ว');
 }
 
@@ -182,10 +183,17 @@ async function saveTxEdit() {
   const amount = parseAmount(el.tsAmount.value);
   if (!title) return nudge(el.tsTitle, 'กรุณาพิมพ์รายการ');
   if (!(amount > 0)) return nudge(el.tsAmount, 'จำนวนเงินไม่ถูกต้อง');
-  Object.assign(t, { title, amount, type: state.editTxType, date: fromInputValue(el.tsDate.value, t.date) });
+  const updatedDate = fromInputValue(el.tsDate.value, t.date);
+  Object.assign(t, { 
+    title, 
+    amount: round2(amount), 
+    type: state.editTxType, 
+    date: updatedDate 
+  });
   await DB.putTx(t);
   closeSheet('sheetTx');
   renderList();
+  await renderWallets();
   toast('แก้ไขแล้ว ✓');
 }
 
@@ -414,6 +422,132 @@ async function restore(e) {
   }
 }
 
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+async function handleCSVImport(e) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (lines.length < 2) throw new Error('ไฟล์ไม่มีข้อมูล');
+    const header = parseCSVLine(lines[0]).map((h) => h.trim());
+    const titleIdx = header.findIndex((h) => h === 'รายการ');
+    const inIdx = header.findIndex((h) => h === 'รายรับ');
+    const outIdx = header.findIndex((h) => h === 'รายจ่าย');
+
+    if (titleIdx === -1 || (inIdx === -1 && outIdx === -1)) {
+      throw new Error('หัวตารางไม่ถูกต้อง (ต้องมี วันที่, รายการ, รายรับ, รายจ่าย)');
+    }
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const vals = parseCSVLine(lines[i]);
+      const r = {};
+      header.forEach((h, idx) => { r[h] = vals[idx]?.trim() ?? ''; });
+      rows.push(r);
+    }
+
+    const lastRow = rows[rows.length - 1];
+    let walletName = file.name.replace(/\.[^/.]+$/, '');
+    if (lastRow && lastRow['รายการ'] && lastRow['รายการ'].startsWith('กระเป๋า')) {
+      walletName = lastRow['รายการ'];
+    }
+
+    const txRows = rows.filter((r) => {
+      const inc = parseFloat(r['รายรับ'] || '0') || 0;
+      const exp = parseFloat(r['รายจ่าย'] || '0') || 0;
+      return inc > 0 || exp > 0;
+    });
+
+    if (!txRows.length) throw new Error('ไม่พบรายการรายรับ-รายจ่ายในไฟล์');
+
+    if (!confirm(`นำเข้า ${txRows.length} รายการ จาก "${file.name}"?\n(ข้อมูลจะถูกนำเข้าสู่กระเป๋า: ${walletName})`)) return;
+
+    showLoader('กำลังนำเข้าข้อมูล CSV…', 0.5);
+
+    const wId = uid();
+    const newWallet = {
+      id: wId,
+      name: walletName,
+      theme: 'mint',
+      icon: '👛',
+      createdAt: Date.now(),
+    };
+
+    const chronological = [...txRows].reverse();
+    const txs = chronological.map((r, idx) => {
+      const inc = parseFloat(r['รายรับ'] || '0') || 0;
+      const exp = parseFloat(r['รายจ่าย'] || '0') || 0;
+      const type = inc > 0 ? 'in' : 'out';
+      const amount = inc > 0 ? inc : exp;
+
+      let dateTs = Date.now();
+      if (r['วันที่']) {
+        const parts = r['วันที่'].split('-').map(Number);
+        let h = 12, m = 0, s = 0;
+        if (r['Created']) {
+          const c = new Date(r['Created']);
+          if (!isNaN(c.getTime())) { h = c.getHours(); m = c.getMinutes(); s = c.getSeconds(); }
+        }
+        dateTs = new Date(parts[0], parts[1] - 1, parts[2], h, m, s).getTime() + (idx * 1000);
+      }
+
+      return {
+        id: uid(),
+        walletId: wId,
+        date: dateTs,
+        title: r['รายการ'] || 'ไม่มีชื่อรายการ',
+        amount,
+        type,
+        createdAt: r['Created'] ? (new Date(r['Created']).getTime() || dateTs) : dateTs,
+      };
+    });
+
+    await DB.putWallet(newWallet);
+    for (const t of txs) {
+      await DB.putTx(t);
+    }
+
+    state.wallets = await DB.getWallets();
+    sortWallets();
+    state.currentId = wId;
+    await loadWallet();
+    await renderWallets();
+    closeDrawer();
+    toast(`นำเข้าสำเร็จ ${txs.length} รายการ ✓`);
+  } catch (err) {
+    console.error(err);
+    toast(`นำเข้าไม่สำเร็จ: ${err.message}`);
+  } finally {
+    hideLoader();
+  }
+}
+
 /* ================= ซิงก์อัตโนมัติ (Google Drive) ================= */
 function renderCloud() {
   const on = Cloud.enabled;
@@ -525,8 +659,10 @@ function bind() {
   el.inSlip.addEventListener('change', handleSlip);
 
   el.list.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-edit]');
+    if (editBtn) return openTxSheet(editBtn.dataset.edit);
     const del = e.target.closest('[data-del]');
-    if (del) return deleteTx(del.dataset.del);
+    if (del) return openTxSheet(del.dataset.del);
     const li = e.target.closest('.tx');
     if (li) openTxSheet(li.dataset.id);
   });
@@ -567,6 +703,7 @@ function bind() {
   });
   el.btnBackup.addEventListener('click', backup);
   el.inRestore.addEventListener('change', restore);
+  el.inCSV?.addEventListener('change', handleCSVImport);
 
   el.btnCloud.addEventListener('click', openCloudSheet);
   el.csConnect.addEventListener('click', connectCloud);
