@@ -1,5 +1,5 @@
 // เปลี่ยนเลขเวอร์ชันทุกครั้งที่แก้โค้ด เพื่อให้ iPhone ดึงไฟล์ใหม่
-const VERSION = 'mymoney-v1.1.6';
+const VERSION = 'mymoney-v1.1.7';
 const RUNTIME = 'mymoney-runtime';
 const SHELL = [
   './', './index.html', './manifest.json', './css/style.css',

@@ -1,8 +1,8 @@
-import { DB } from './db.js?v=1.1.6';
-import { Cloud } from './cloud.js?v=1.1.6';
-import { fitAll, watchFit } from './fit-text.js?v=1.1.6';
-import { scanSlip } from './ocr.js?v=1.1.6';
-import { fmtShort, fmtLong, fmtMonth, toInputValue, fromInputValue, money, parseAmount, round2, uid, esc } from './utils.js?v=1.1.6';
+import { DB } from './db.js?v=1.1.7';
+import { Cloud } from './cloud.js?v=1.1.7';
+import { fitAll, watchFit } from './fit-text.js?v=1.1.7';
+import { scanSlip } from './ocr.js?v=1.1.7';
+import { fmtShort, fmtLong, fmtMonth, toInputValue, fromInputValue, money, parseAmount, round2, uid, esc } from './utils.js?v=1.1.7';
 
 /* ================= ค่าคงที่ ================= */
 const THEMES = {
@@ -824,7 +824,7 @@ async function init() {
   }, 20000);
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=1.1.6').then((reg) => reg.update()).catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=1.1.7').then((reg) => reg.update()).catch(console.error);
   }
 }
 

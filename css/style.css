@@ -41,19 +41,19 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
-  background: var(--primary);
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
 }
 :root[data-mode="dark"] {
-  background: color-mix(in srgb, var(--primary) 32%, var(--card));
+  background: var(--bg);
 }
 body {
   margin: 0;
-  height: 100dvh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  padding: 0;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
@@ -120,7 +120,7 @@ input { font: inherit; }
 
 /* ---------- แถบบน (ทึบ ชัดเจน พ้นระยะเบลอของ iOS Status Bar) ---------- */
 .topbar {
-  position: relative; z-index: 20; flex: none;
+  position: sticky; top: 0; z-index: 20;
   display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
   background: var(--primary);
@@ -128,6 +128,15 @@ input { font: inherit; }
   box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .14);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+.topbar::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 500px;
+  background: inherit;
 }
 @media (display-mode: standalone) {
   .topbar {
@@ -148,12 +157,7 @@ html.ios-standalone .topbar {
 
 /* ---------- ฟอร์ม (กระชับพอดีมือ) ---------- */
 .content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(44px + env(safe-area-inset-bottom, 0px));
 }
 .entry {
   margin: 10px 10px 6px; padding: 10px 12px;
