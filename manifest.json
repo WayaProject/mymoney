@@ -1,0 +1,17 @@
+{
+  "name": "MyMoney",
+  "short_name": "MyMoney",
+  "description": "บันทึกรายรับรายจ่ายแบบรวดเร็ว",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f5fa",
+  "theme_color": "#8fdcc8",
+  "lang": "th",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

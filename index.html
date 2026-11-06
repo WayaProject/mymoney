@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th" data-mode="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>MyMoney</title>
+  <meta name="theme-color" content="#8fdcc8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MyMoney" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    document.documentElement.dataset.mode =
+      localStorage.getItem('mm-mode') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  </script>
+</head>
+<body>
+  <!-- ===== แถบบน ===== -->
+  <header class="topbar" id="topbar">
+    <button class="clay-btn icon-btn" id="btnMenu" aria-label="เมนูกระเป๋า">
+      <span class="burger"><i></i><i></i><i></i></span>
+    </button>
+    <h1 class="topbar-title fit center"><span id="walletTitle">MyMoney</span></h1>
+    <button class="clay-btn icon-btn" id="btnSummary" aria-label="สรุปภาพรวม">📊</button>
+  </header>
+
+  <main class="content">
+    <!-- ===== ฟอร์มบันทึก ===== -->
+    <section class="entry">
+      <div class="row">
+        <label class="date-field">
+          <span class="clay-ico xs">🗓️</span>
+          <span class="fit"><span id="dateLabel">-</span></span>
+          <input type="datetime-local" id="inDate" aria-label="วันที่และเวลา" />
+        </label>
+        <label class="scan-btn clay-btn" for="inSlip">
+          <span>📸</span><small>สแกนสลิป</small>
+        </label>
+        <input type="file" id="inSlip" accept="image/*" class="sr-only" />
+      </div>
+      <div class="row">
+        <input id="inTitle" class="field" type="text" placeholder="รายการ" autocomplete="off" enterkeyhint="next" />
+        <input id="inAmount" class="field amount" type="text" placeholder="จำนวนเงิน" inputmode="decimal" autocomplete="off" />
+      </div>
+      <div class="row">
+        <button class="btn btn-income" id="btnIncome">บันทึกรายรับ</button>
+        <button class="btn btn-expense" id="btnExpense">บันทึกรายจ่าย</button>
+      </div>
+    </section>
+
+    <!-- ===== ตารางรายการ ===== -->
+    <div class="list-head">
+      <span></span><span>รายรับ</span><span>รายจ่าย</span><span>คงเหลือ</span><span></span>
+    </div>
+    <ul class="tx-list" id="txList"></ul>
+    <button class="more-btn" id="btnMore" hidden>แสดงรายการเพิ่ม</button>
+    <div class="empty" id="empty" hidden>
+      <div class="clay-ico lg">🪙</div>
+      <p>ยังไม่มีรายการในกระเป๋านี้</p>
+    </div>
+  </main>
+
+  <!-- ===== เมนูซ้าย ===== -->
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer" aria-label="เมนูกระเป๋าเงิน">
+    <div class="drawer-head">
+      <div class="clay-ico">💰</div>
+      <div class="brand"><b>MyMoney</b><small>บัญชีรายรับ–รายจ่าย</small></div>
+      <button class="close-btn" id="btnCloseDrawer" aria-label="ปิด">✕</button>
+    </div>
+
+    <p class="sec-label">กระเป๋าเงิน</p>
+    <ul class="wallet-list" id="walletList"></ul>
+    <button class="add-wallet" id="btnAddWallet"><span class="clay-ico xs">➕</span>เพิ่มกระเป๋า</button>
+
+    <p class="sec-label">ตั้งค่า</p>
+    <button class="setting" id="btnCloud">
+      <span class="clay-ico xs">☁️</span>
+      <span class="grow fit"><span id="cloudLabel">ซิงก์อัตโนมัติ: ปิด</span></span>
+      <i class="dot" id="cloudDot"></i>
+    </button>
+    <div class="setting">
+      <span class="clay-ico xs">🌙</span><span class="grow">โหมดมืด</span>
+      <label class="switch"><input type="checkbox" id="tglDark" /><span></span></label>
+    </div>
+    <button class="setting" id="btnBackup"><span class="clay-ico xs">💾</span><span class="grow">ส่งออกไฟล์สำรอง</span></button>
+    <label class="setting" for="inRestore"><span class="clay-ico xs">📂</span><span class="grow">กู้คืนจากไฟล์</span></label>
+    <input type="file" id="inRestore" accept="application/json,.json" class="sr-only" />
+    <p class="drawer-foot" id="drawerFoot">ข้อมูลเก็บในเครื่องนี้เท่านั้น</p>
+  </aside>
+
+  <!-- ===== ป๊อปอัปสรุปภาพรวม ===== -->
+  <div class="sheet-wrap" id="sheetSummary">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sheet-head">
+        <h2 class="fit"><span id="sumTitle">สรุปภาพรวม</span></h2>
+        <button class="close-btn" data-close aria-label="ปิด">✕</button>
+      </div>
+      <div id="sumBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== ป๊อปอัปเพิ่ม/แก้ไขกระเป๋า ===== -->
+  <div class="sheet-wrap" id="sheetWallet">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sheet-head">
+        <h2 id="wsTitle">เพิ่มกระเป๋า</h2>
+        <button class="close-btn" data-close aria-label="ปิด">✕</button>
+      </div>
+      <label class="lbl" for="wsName">ชื่อกระเป๋า</label>
+      <input id="wsName" class="field" maxlength="40" placeholder="เช่น เงินเดือน, ค่าบ้าน" />
+      <span class="lbl">ไอคอน</span>
+      <div class="icon-grid" id="wsIcons"></div>
+      <span class="lbl">ธีมสี</span>
+      <div class="swatch-grid" id="wsThemes"></div>
+      <button class="btn btn-primary" id="wsSave">บันทึก</button>
+      <button class="btn-text danger" id="wsDelete">ลบกระเป๋านี้</button>
+    </div>
+  </div>
+
+  <!-- ===== ป๊อปอัปแก้ไขรายการ ===== -->
+  <div class="sheet-wrap" id="sheetTx">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sheet-head">
+        <h2>แก้ไขรายการ</h2>
+        <button class="close-btn" data-close aria-label="ปิด">✕</button>
+      </div>
+      <div class="seg" id="tsType">
+        <button data-type="in">รายรับ</button>
+        <button data-type="out">รายจ่าย</button>
+      </div>
+      <label class="lbl" for="tsDate">วันที่</label>
+      <input type="datetime-local" id="tsDate" class="field" />
+      <label class="lbl" for="tsTitle">รายการ</label>
+      <input id="tsTitle" class="field" autocomplete="off" />
+      <label class="lbl" for="tsAmount">จำนวนเงิน</label>
+      <input id="tsAmount" class="field" inputmode="decimal" autocomplete="off" />
+      <button class="btn btn-primary" id="tsSave">บันทึกการแก้ไข</button>
+      <button class="btn-text danger" id="tsDelete">ลบรายการนี้</button>
+    </div>
+  </div>
+
+  <!-- ===== ป๊อปอัปซิงก์อัตโนมัติ ===== -->
+  <div class="sheet-wrap" id="sheetCloud">
+    <div class="sheet-backdrop" data-close></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sheet-head">
+        <h2 class="fit"><span>ซิงก์อัตโนมัติ (Google Drive)</span></h2>
+        <button class="close-btn" data-close aria-label="ปิด">✕</button>
+      </div>
+      <p class="cloud-status" id="csStatus"></p>
+      <label class="lbl" for="csUrl">Web App URL</label>
+      <input id="csUrl" class="field" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <label class="lbl" for="csKey">รหัสลับ</label>
+      <input id="csKey" class="field" type="text" placeholder="รหัสจากฟังก์ชัน setup()" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <button class="btn btn-primary" id="csConnect">เชื่อมต่อ</button>
+      <div class="btn-row" id="csActions">
+        <button class="btn-text" id="csSyncNow">สำรองตอนนี้</button>
+        <button class="btn-text" id="csPull">ดึงจากคลาวด์</button>
+      </div>
+      <button class="btn-text danger" id="csDisconnect">ยกเลิกการเชื่อมต่อ</button>
+      <p class="hint">ทำสำเนา URL และรหัสลับเก็บไว้ในแอปโน้ต เผื่อลงแอปใหม่หรือเปลี่ยนเครื่อง</p>
+    </div>
+  </div>
+
+  <!-- ===== Loader / Toast ===== -->
+  <div class="loader" id="loader">
+    <div class="loader-card">
+      <div class="clay-ico lg">🔍</div>
+      <p id="loaderText">กำลังอ่านสลิป…</p>
+      <div class="progress"><i id="loaderBar"></i></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
