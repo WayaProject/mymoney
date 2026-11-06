@@ -54,7 +54,7 @@ const el = {
   dateLabel: $('#dateLabel'), inDate: $('#inDate'), inSlip: $('#inSlip'), inTitle: $('#inTitle'), inAmount: $('#inAmount'),
   btnIncome: $('#btnIncome'), btnExpense: $('#btnExpense'), list: $('#txList'), empty: $('#empty'), btnMore: $('#btnMore'),
   drawer: $('#drawer'), backdrop: $('#backdrop'), btnCloseDrawer: $('#btnCloseDrawer'), walletList: $('#walletList'),
-  btnAddWallet: $('#btnAddWallet'), tglDark: $('#tglDark'), btnBackup: $('#btnBackup'), inRestore: $('#inRestore'), inCSV: $('#inCSV'),
+  btnAddWallet: $('#btnAddWallet'), tglDark: $('#tglDark'), btnBackup: $('#btnBackup'), inRestore: $('#inRestore'), inCSV: $('#inCSV'), btnClearCache: $('#btnClearCache'),
   btnCloud: $('#btnCloud'), cloudLabel: $('#cloudLabel'), cloudDot: $('#cloudDot'), drawerFoot: $('#drawerFoot'),
   csStatus: $('#csStatus'), csUrl: $('#csUrl'), csKey: $('#csKey'), csConnect: $('#csConnect'),
   csSyncNow: $('#csSyncNow'), csPull: $('#csPull'), csDisconnect: $('#csDisconnect'), csActions: $('#csActions'),
@@ -594,6 +594,28 @@ async function handleCSVImport(e) {
   }
 }
 
+async function clearAppCache() {
+  if (!confirm('ล้างแคชเพื่อโหลดแอปเวอร์ชันล่าสุด?\n(ข้อมูลบัญชีและกระเป๋าเงินของคุณจะยังอยู่ครบ ไม่หาย)')) return;
+  showLoader('กำลังล้างแคช…', 0.5);
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    toast('ล้างแคชสำเร็จ กำลังเปิดเวอร์ชันใหม่…');
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 600);
+  } catch (err) {
+    toast(`ล้างแคชไม่สำเร็จ: ${err.message}`);
+    hideLoader();
+  }
+}
+
 /* ================= ซิงก์อัตโนมัติ (Google Drive) ================= */
 function renderCloud() {
   const on = Cloud.enabled;
@@ -750,6 +772,7 @@ function bind() {
   el.btnBackup.addEventListener('click', backup);
   el.inRestore.addEventListener('change', restore);
   el.inCSV?.addEventListener('change', handleCSVImport);
+  el.btnClearCache?.addEventListener('click', clearAppCache);
 
   el.btnCloud.addEventListener('click', openCloudSheet);
   el.csConnect.addEventListener('click', connectCloud);

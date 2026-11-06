@@ -4,16 +4,17 @@ export const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อั�
 
 const pad = (n) => String(n).padStart(2, '0');
 const be = (d) => d.getFullYear() + 543;
+const be2 = (d) => String(d.getFullYear() + 543).slice(-2);
 
-/** 5 พ.ย. 2569 21:16 */
+/** 5 พ.ย. 69 21:16 */
 export const fmtShort = (ts) => {
   const d = new Date(ts);
-  return `${d.getDate()} ${TH_MONTHS_SHORT[d.getMonth()]} ${be(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getDate()} ${TH_MONTHS_SHORT[d.getMonth()]} ${be2(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
-/** วันศุกร์ที่ 23 ตุลาคม 2569 */
+/** ศุกร์ที่ 23 ตุลาคม 69 */
 export const fmtLong = (ts) => {
   const d = new Date(ts);
-  return `วัน${TH_DAYS[d.getDay()]}ที่ ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${be(d)}`;
+  return `${TH_DAYS[d.getDay()]}ที่ ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${be2(d)}`;
 };
 export const fmtMonth = (y, m) => `${TH_MONTHS[m]} ${y + 543}`;
 

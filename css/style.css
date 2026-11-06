@@ -203,17 +203,22 @@ input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
 .pill.zero { opacity: .4; }
 .pill.bal { color: var(--text); background: var(--tint-strong); }
 .pill.bal.neg { color: var(--expense); }
-.edit-btn, .del {
-  width: 26px; height: 26px; padding: 0; border: none; border-radius: 9px;
-  display: grid; place-items: center; font-size: 13px;
-  background: var(--tint); color: var(--muted);
-  box-shadow: var(--inset);
-  transition: transform .12s, background .15s, color .15s;
+.edit-btn {
+  width: 26px; height: 26px; padding: 0; border: none; border-radius: 8px;
+  display: grid; place-items: center;
+  background: transparent; box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform .12s, color .15s;
 }
-.edit-btn:active, .del:active {
-  transform: scale(.92);
-  background: var(--tint-strong);
+.edit-btn:active {
+  transform: scale(.88);
   color: var(--text);
+}
+.del {
+  width: 22px; height: 22px; padding: 0; border: none; border-radius: 8px;
+  display: grid; place-items: center; font-size: 12px;
+  background: transparent; color: var(--muted);
 }
 .more-btn {
   display: block; margin: 14px auto 0; padding: 10px 20px;

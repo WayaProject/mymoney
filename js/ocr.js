@@ -85,54 +85,125 @@ export async function scanSlip(file, progress = () => {}) {
 
 /* ================= ตัวแยกข้อมูลจากข้อความสลิป ================= */
 const TH_DIGIT = { '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4', '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9' };
-const normalize = (t) => t.replace(/[๐-๙]/g, (d) => TH_DIGIT[d]).replace(/\u0E4D\u0E32/g, '\u0E33').replace(/\r/g, '');
+const normalize = (t) => (t || '')
+  .replace(/[๐-๙]/g, (d) => TH_DIGIT[d])
+  .replace(/\u0E4D\u0E32/g, '\u0E33')
+  .replace(/\r/g, '')
+  .replace(/,/g, ' ');
 
 const MONTHS = [
-  ['มค', 'มกราคม', 'jan'], ['กพ', 'กุมภาพันธ์', 'feb'], ['มีค', 'มีนาคม', 'mar'], ['เมย', 'เมษายน', 'apr'],
-  ['พค', 'พฤษภาคม', 'may'], ['มิย', 'มิถุนายน', 'jun'], ['กค', 'กรกฎาคม', 'jul'], ['สค', 'สิงหาคม', 'aug'],
-  ['กย', 'กันยายน', 'sep'], ['ตค', 'ตุลาคม', 'oct'], ['พย', 'พฤศจิกายน', 'nov'], ['ธค', 'ธันวาคม', 'dec'],
+  ['มค', 'มกราคม', 'jan', 'january'],
+  ['กพ', 'กุมภาพันธ์', 'feb', 'february'],
+  ['มีค', 'มีนาคม', 'mar', 'march'],
+  ['เมย', 'เมษายน', 'apr', 'april'],
+  ['พค', 'พฤษภาคม', 'may'],
+  ['มิย', 'มิถุนายน', 'jun', 'june'],
+  ['กค', 'กรกฎาคม', 'jul', 'july'],
+  ['สค', 'สิงหาคม', 'aug', 'august'],
+  ['กย', 'กันยายน', 'sep', 'september'],
+  ['ตค', 'ตุลาคม', 'oct', 'october'],
+  ['พย', 'พฤศจิกายน', 'nov', 'november'],
+  ['ธค', 'ธันวาคม', 'dec', 'december'],
 ];
+
 function monthIndex(raw) {
-  const k = raw.toLowerCase().replace(/[\s.]/g, '');
+  if (!raw) return -1;
+  let k = raw.toLowerCase()
+    .replace(/(พ\.?ศ\.?|ค\.?ศ\.?)/g, '')
+    .replace(/[\s.]/g, '');
   if (!k) return -1;
   for (let i = 0; i < 12; i++) {
-    const [ab, full, en] = MONTHS[i];
-    if (k === ab || k === full || k.startsWith(en) || (k.length >= 4 && full.startsWith(k))) return i;
+    const list = MONTHS[i];
+    for (const m of list) {
+      if (k === m || k.startsWith(m) || (k.length >= 3 && m.startsWith(k))) {
+        return i;
+      }
+    }
   }
   return -1;
 }
+
 const toYear = (y) => {
   y = +y;
-  if (y < 100) return y >= 40 ? y + 2500 - 543 : 2000 + y; // 68 → 2568 → 2025
-  if (y > 2400) return y - 543;                              // พ.ศ. → ค.ศ.
+  if (y < 100) return y >= 40 ? y + 2500 - 543 : 2000 + y; // 69 -> 2026, 26 -> 2026
+  if (y > 2400) return y - 543;                              // 2569 -> 2026
   return y;
 };
 
+function extractTime(lineOrText) {
+  if (!lineOrText) return null;
+  // 1. แบบมี : เช่น 20:34 หรือ 20:34:15
+  let m = lineOrText.match(/(?:^|[^\d])([01]?\d|2[0-3])\s*[:]\s*([0-5]\d)(?:\s*[:]\s*([0-5]\d))?(?!\d)/);
+  if (m) return { h: +m[1], m: +m[2] };
+  // 2. แบบจุดที่มี น. กำกับ เช่น 20.34 น. หรือ 20.34น. หรือ เวลา 20.34
+  m = lineOrText.match(/(?:เวลา\s*)?([01]?\d|2[0-3])\s*[.]\s*([0-5]\d)\s*(?:น\.?)/);
+  if (m) return { h: +m[1], m: +m[2] };
+  // 3. แบบจุดทั่วไปที่มีความน่าจะเป็นเวลา 0-23.00-59
+  m = lineOrText.match(/(?:^|[^\d])([01]?\d|2[0-3])\s*[.]\s*([0-5]\d)(?!\d)/);
+  if (m && +m[1] >= 0 && +m[1] <= 23 && +m[2] >= 0 && +m[2] <= 59) {
+    return { h: +m[1], m: +m[2] };
+  }
+  return null;
+}
+
 function parseDate(text) {
   let d = 0, m = -1, y = 0;
-  // 23 ต.ค. 68 / 23 ตุลาคม 2568 / 23 Oct 2025
-  for (const x of text.matchAll(/(?:^|[^\d])(\d{1,2})\s*([A-Za-z\u0E00-\u0E7F][A-Za-z\u0E00-\u0E7F.\s]{0,14}?)\s*(\d{4}|\d{2})(?!\d)/g)) {
-    const mi = monthIndex(x[2]);
-    if (mi >= 0 && +x[1] >= 1 && +x[1] <= 31) { d = +x[1]; m = mi; y = toYear(x[3]); break; }
-  }
-  // Oct 23, 2025
-  if (m < 0) {
-    for (const x of text.matchAll(/([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})/g)) {
-      const mi = monthIndex(x[1]);
-      if (mi >= 0) { d = +x[2]; m = mi; y = toYear(x[3]); break; }
+
+  // 1. วัน เดือน ปี (เช่น 4 พ.ย. 69, 04 พ.ย. 2569, 4 พ.ย. พ.ศ. 2569, 4 พ.ย.69, 4 Nov 2026)
+  const thaiDateRegex = /(?:^|[^\d])(\d{1,2})\s*([A-Za-z\u0E00-\u0E7F][A-Za-z\u0E00-\u0E7F.\s]{0,20}?)\s*(?:พ\.?ศ\.?\s*|ค\.?ศ\.?\s*)?(\d{4}|\d{2})(?!\d)/g;
+  for (const match of text.matchAll(thaiDateRegex)) {
+    const mi = monthIndex(match[2]);
+    const day = +match[1];
+    const year = toYear(match[3]);
+    if (mi >= 0 && day >= 1 && day <= 31 && year >= 2000 && year <= 2100) {
+      d = day; m = mi; y = year;
+      break;
     }
   }
-  // 23/10/2568
+
+  // 2. Month Day, Year (เช่น Nov 4, 2026)
   if (m < 0) {
-    for (const x of text.matchAll(/(?:^|[^\d])(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4}|\d{2})(?!\d)/g)) {
-      const dd = +x[1], mm = +x[2] - 1;
-      if (dd >= 1 && dd <= 31 && mm >= 0 && mm <= 11) { d = dd; m = mm; y = toYear(x[3]); break; }
+    const enRegex = /([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4}|\d{2})/g;
+    for (const match of text.matchAll(enRegex)) {
+      const mi = monthIndex(match[1]);
+      const day = +match[2];
+      const year = toYear(match[3]);
+      if (mi >= 0 && day >= 1 && day <= 31 && year >= 2000 && year <= 2100) {
+        d = day; m = mi; y = year;
+        break;
+      }
     }
   }
+
+  // 3. ตัวเลขล้วน เช่น 04/11/2569, 04/11/69, 04-11-2026
+  if (m < 0) {
+    const numRegex = /(?:^|[^\d])(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4}|\d{2})(?!\d)/g;
+    for (const match of text.matchAll(numRegex)) {
+      const dd = +match[1];
+      const mm = +match[2] - 1;
+      const yy = toYear(match[3]);
+      if (dd >= 1 && dd <= 31 && mm >= 0 && mm <= 11 && yy >= 2000 && yy <= 2100) {
+        d = dd; m = mm; y = yy;
+        break;
+      }
+    }
+  }
+
   if (m < 0 || y < 2000 || y > 2100) return null;
-  const t = text.match(/(?:^|[^\d])([01]?\d|2[0-3])\s*:\s*([0-5]\d)(?!\d)/);
+
+  // หาเวลา (ชั่วโมง:นาที) - ตรวจจากบรรทัดเดียวกับวันที่ก่อน
+  let time = null;
+  const lines = text.split('\n');
+  const lineWithDate = lines.find((l) => l.includes(String(d)) && (l.includes(String(y)) || l.includes(String(y + 543)) || l.includes(String(y + 543).slice(-2))));
+  if (lineWithDate) {
+    time = extractTime(lineWithDate);
+  }
+  if (!time) {
+    time = extractTime(text);
+  }
+
   const now = new Date();
-  const date = new Date(y, m, d, t ? +t[1] : now.getHours(), t ? +t[2] : now.getMinutes());
+  const date = new Date(y, m, d, time ? time.h : now.getHours(), time ? time.m : now.getMinutes(), 0);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
