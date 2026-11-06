@@ -39,9 +39,21 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; }
+html {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--primary);
+}
+:root[data-mode="dark"] {
+  background: color-mix(in srgb, var(--primary) 32%, var(--card));
+}
 body {
-  min-height: 100dvh;
+  margin: 0;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
@@ -54,7 +66,7 @@ input { font: inherit; }
 .sr-only { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
 
 /* ---------- ข้อความบรรทัดเดียว (บีบช่องไฟแทน ...) ---------- */
-.fit { display: flex; min-width: 0; overflow: hidden; white-space: nowrap; line-height: 1.6; }
+.fit { display: flex; min-width: 0; overflow-x: hidden; overflow-y: visible; white-space: nowrap; line-height: 1.6; }
 .fit > span { flex: 0 0 auto; white-space: nowrap; transform-origin: left center; }
 .fit.center { justify-content: center; }
 .fit.center > span { transform-origin: center center; }
@@ -106,16 +118,24 @@ input { font: inherit; }
 }
 .clay-btn:active, .btn:active, .clay-ico:active { transform: scale(.95) translateY(1px); }
 
-/* ---------- แถบบน (ทึบ ชัดเจน ไม่เบลอ) ---------- */
+/* ---------- แถบบน (ทึบ ชัดเจน พ้นระยะเบลอของ iOS Status Bar) ---------- */
 .topbar {
-  position: sticky; top: 0; z-index: 20;
+  position: relative; z-index: 20; flex: none;
   display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px;
-  padding: calc(env(safe-area-inset-top) + 6px) 12px 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
   background: var(--primary);
   border-radius: 0 0 20px 20px;
   box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .14);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+@media (display-mode: standalone) {
+  .topbar {
+    padding-top: max(calc(env(safe-area-inset-top, 47px) + 18px), 66px);
+  }
+}
+html.ios-standalone .topbar {
+  padding-top: max(calc(env(safe-area-inset-top, 47px) + 18px), 66px);
 }
 [data-mode="dark"] .topbar {
   background: color-mix(in srgb, var(--primary) 32%, var(--card));
@@ -127,7 +147,14 @@ input { font: inherit; }
 .burger i { display: block; width: 19px; height: 2.5px; border-radius: 3px; background: var(--on-primary); }
 
 /* ---------- ฟอร์ม (กระชับพอดีมือ) ---------- */
-.content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+}
 .entry {
   margin: 10px 10px 6px; padding: 10px 12px;
   display: grid; gap: 8px;
@@ -196,20 +223,22 @@ input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   overflow: visible;
 }
 .tx-date {
   font-size: 11px;
   color: var(--muted);
-  line-height: 1.2;
-  margin-bottom: 2px;
+  line-height: 1.55;
+  padding: 1px 0 2px;
+  margin-bottom: 0;
+  overflow: visible;
 }
 .tx-title {
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.35;
-  padding-top: 3px;
+  line-height: 1.45;
+  padding: 1px 0 2px;
   overflow: visible;
 }
 .pill {

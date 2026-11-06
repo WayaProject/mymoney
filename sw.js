@@ -1,5 +1,5 @@
 // เปลี่ยนเลขเวอร์ชันทุกครั้งที่แก้โค้ด เพื่อให้ iPhone ดึงไฟล์ใหม่
-const VERSION = 'mymoney-v1.1.5';
+const VERSION = 'mymoney-v1.1.6';
 const RUNTIME = 'mymoney-runtime';
 const SHELL = [
   './', './index.html', './manifest.json', './css/style.css',
@@ -11,7 +11,7 @@ const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdeliv
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(VERSION);
-    await c.addAll(SHELL);
+    await Promise.all(SHELL.map((u) => c.add(new Request(u, { cache: 'reload' }))));
     await Promise.all(OPTIONAL.map((u) => c.add(u).catch(() => {})));
     await self.skipWaiting();
   })());
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (e) => {
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(VERSION);
   const cached = await cache.match(req, { ignoreSearch: true });
-  const network = fetch(req)
+  const network = fetch(req, { cache: 'no-cache' })
     .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
     .catch(() => cached);
   return cached || network;

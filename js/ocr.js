@@ -19,13 +19,13 @@ function getWorker() {
   if (!workerPromise) {
     workerPromise = (async () => {
       await loadScript(TESS_SRC);
-      return window.Tesseract.createWorker(['tha', 'eng'], 1, { logger: (m) => onProgress(m) });
+      return window.Tesseract.createWorker('tha', 1, { logger: (m) => onProgress(m) });
     })().catch((e) => { workerPromise = null; throw e; });
   }
   return workerPromise;
 }
 
-// ปิด worker เมื่อไม่ได้ใช้ 2 นาที เพื่อคืนหน่วยความจำ
+// ปิด worker เมื่อไม่ได้ใช้ 5 นาที เพื่อคืนหน่วยความจำ
 function scheduleTerminate() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(async () => {
@@ -33,10 +33,10 @@ function scheduleTerminate() {
     const w = await workerPromise;
     workerPromise = null;
     await w.terminate();
-  }, 120000);
+  }, 300000);
 }
 
-// ปรับขนาดรูปให้พอเหมาะสำหรับ OCR โดยคงความคมชัดของตัวหนังสือและวรรณยุกต์ไทย
+// ปรับขนาดรูปให้พอเหมาะสำหรับ OCR (รวดเร็ว + ลบลายน้ำพื้นหลังสลิป + คงความคมชัดตัวอักษรไทย)
 async function fileToCanvas(file) {
   const url = URL.createObjectURL(file);
   try {
@@ -46,7 +46,7 @@ async function fileToCanvas(file) {
       i.onerror = () => rej(new Error('เปิดรูปไม่ได้'));
       i.src = url;
     });
-    const scale = Math.min(2.5, 1600 / img.naturalWidth);
+    const scale = Math.min(1.25, 1000 / img.naturalWidth);
     const w = Math.round(img.naturalWidth * scale);
     const h = Math.round(img.naturalHeight * scale);
     const c = document.createElement('canvas');
@@ -54,6 +54,18 @@ async function fileToCanvas(file) {
     c.height = h;
     const ctx = c.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(img, 0, 0, w, h);
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const v = 0.299 * r + 0.587 * g + 0.114 * b;
+      const sat = Math.max(r, g, b) - Math.min(r, g, b);
+      // ลบลายน้ำสีพาสเทลของธนาคาร (เช่น ตึก/ลวดลายพื้นหลัง) แต่รักษาขอบตัวอักษรสีเทาเข้ม/ดำให้เรียบเนียน
+      const eff = (sat > 24 && v > 125) ? 255 : v;
+      const gray = eff > 185 ? 255 : eff < 35 ? 0 : Math.round(((eff - 35) / 150) * 255);
+      d[i] = d[i + 1] = d[i + 2] = gray;
+    }
+    ctx.putImageData(imgData, 0, 0);
     return c;
   } finally {
     URL.revokeObjectURL(url);
@@ -99,9 +111,11 @@ const MONTHS = [
 
 function monthIndex(raw) {
   if (!raw) return -1;
+  // ลบจุด ช่องว่าง และสระล่าง/วรรณยุกต์แปลกปลอมที่ OCR มักเข้าใจผิดจากจุดย่อเดือน (เช่น พ.ย. -> พุย. หรือ พ.ุย.)
   let k = raw.toLowerCase()
+    .replace(/w/g, 'พ')
     .replace(/(พ\.?ศ\.?|ค\.?ศ\.?)/g, '')
-    .replace(/[\s.]/g, '');
+    .replace(/[\s.,'´`"\u0E38-\u0E3A\u0E47-\u0E4E]/g, '');
   if (!k) return -1;
   for (let i = 0; i < 12; i++) {
     const list = MONTHS[i];
@@ -111,6 +125,10 @@ function monthIndex(raw) {
       }
     }
   }
+  // กรณีสระบนเพี้ยนแต่พยัญชนะคู่ตรงกัน
+  const cons = k.replace(/[\u0E30-\u0E3A\u0E40-\u0E4E]/g, '');
+  const pairMap = { มค: 0, กพ: 1, มีค: 2, เมย: 3, มย: 3, พค: 4, มิย: 5, กค: 6, สค: 7, กย: 8, ตค: 9, พย: 10, ธค: 11 };
+  if (pairMap[cons] !== undefined) return pairMap[cons];
   return -1;
 }
 
@@ -137,13 +155,23 @@ function extractTime(lineOrText) {
   return null;
 }
 
-const TH_MONTH_PATTERN = 'ม\\.?\\s*ค|ก\\.?\\s*พ|มี\\.?\\s*ค|เม\\.?\\s*ย|พ\\.?\\s*ค|มิ\\.?\\s*ย|ก\\.?\\s*ค|ส\\.?\\s*ค|ก\\.?\\s*ย|ต\\.?\\s*ค|พ\\.?\\s*ย|ธ\\.?\\s*ค|มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|กรกฎาคม|สิงหาคม|กันยายน|ตุลาคม|พฤศจิกายน|ธันวาคม|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+const M_SEP = '[\\s.,\'´`"\\u0E30-\\u0E3A\\u0E47-\\u0E4E]*';
+const TH_MONTH_PATTERN = [
+  `มี${M_SEP}ค`, `มิ${M_SEP}ย`, `เม${M_SEP}ย`,
+  `ม${M_SEP}ค`, `ก${M_SEP}[พw]`, `[พw]${M_SEP}ค`,
+  `ก${M_SEP}ค`, `ส${M_SEP}ค`, `ก${M_SEP}ย`,
+  `ต${M_SEP}ค`, `[พw]${M_SEP}ย`, `ธ${M_SEP}ค`,
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+  'jan(?:uary)?', 'feb(?:ruary)?', 'mar(?:ch)?', 'apr(?:il)?', 'may', 'june?',
+  'july?', 'aug(?:ust)?', 'sep(?:tember)?', 'oct(?:ober)?', 'nov(?:ember)?', 'dec(?:ember)?'
+].join('|');
 
 function parseDate(text) {
   let d = 0, m = -1, y = 0;
 
-  // 1. วัน เดือน ปี (เช่น 4 พ.ย. 69, 04 พ.ย. 69, 4 พ.ย. 2569, 4 พ.ย. พ.ศ. 2569, 4 พ.ย.69, 4 Nov 2026)
-  const thaiDateRegex = new RegExp(`(?:^|[^\\d])(\\d{1,2})\\s*(${TH_MONTH_PATTERN})[.\\s]*(?:พ\\.?ศ\\.?\\s*|ค\\.?ศ\\.?\\s*)?(\\d{4}|\\d{2})(?!\\d)`, 'gi');
+  // 1. วัน เดือน ปี (รองรับกรณี OCR อ่านจุดย่อเดือนเป็นสระอุ เช่น 4 พุย. 69, 4 พ.ุย. 69, 4 พ.ย. 69, 4 พ.ย. 2569)
+  const thaiDateRegex = new RegExp(`(?:^|[^\\d])(\\d{1,2})\\s*(${TH_MONTH_PATTERN})[.\\s'´\`"\\u0E30-\\u0E3A\\u0E47-\\u0E4E]*(?:พ\\.?ศ\\.?\\s*|ค\\.?ศ\\.?\\s*)?(\\d{4}|\\d{2})(?!\\d)`, 'gi');
   for (const match of text.matchAll(thaiDateRegex)) {
     const mi = monthIndex(match[2]);
     const day = +match[1];
@@ -179,6 +207,16 @@ function parseDate(text) {
         d = dd; m = mm; y = yy;
         break;
       }
+    }
+  }
+
+  // 4. Fallback จากรหัสอ้างอิงสลิปที่ขึ้นต้นด้วย YYYYMMDD (เช่น 202611043762663)
+  if (m < 0) {
+    const refMatch = text.match(/(?:^|[^\d])(20[2-4]\d)(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{4,}/);
+    if (refMatch) {
+      y = +refMatch[1];
+      m = +refMatch[2] - 1;
+      d = +refMatch[3];
     }
   }
 

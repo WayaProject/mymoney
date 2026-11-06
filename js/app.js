@@ -1,8 +1,8 @@
-import { DB } from './db.js';
-import { Cloud } from './cloud.js';
-import { fitAll, watchFit } from './fit-text.js';
-import { scanSlip } from './ocr.js';
-import { fmtShort, fmtLong, fmtMonth, toInputValue, fromInputValue, money, parseAmount, round2, uid, esc } from './utils.js';
+import { DB } from './db.js?v=1.1.6';
+import { Cloud } from './cloud.js?v=1.1.6';
+import { fitAll, watchFit } from './fit-text.js?v=1.1.6';
+import { scanSlip } from './ocr.js?v=1.1.6';
+import { fmtShort, fmtLong, fmtMonth, toInputValue, fromInputValue, money, parseAmount, round2, uid, esc } from './utils.js?v=1.1.6';
 
 /* ================= ค่าคงที่ ================= */
 const THEMES = {
@@ -726,7 +726,7 @@ function bind() {
   el.btnExpense.addEventListener('click', () => addTx('out'));
   el.inTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.inAmount.focus(); } });
   el.inDate.addEventListener('change', onDateChange);
-  el.inDate.addEventListener('blur', onDateChange);
+  el.inDate.addEventListener('input', onDateChange);
   el.inSlip.addEventListener('change', handleSlip);
 
   el.list.addEventListener('click', (e) => {
@@ -790,6 +790,9 @@ function bind() {
 
 /* ================= Init ================= */
 async function init() {
+  if (window.navigator.standalone || matchMedia('(display-mode: standalone)').matches) {
+    document.documentElement.classList.add('ios-standalone');
+  }
   applyMode(document.documentElement.dataset.mode || 'light');
   navigator.storage?.persist?.().catch(() => {});
   DB.onChange = () => Cloud.markDirty(); // ทุกครั้งที่ข้อมูลเปลี่ยน → ซิงก์อัตโนมัติ
@@ -820,7 +823,9 @@ async function init() {
     }
   }, 20000);
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.error);
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js?v=1.1.6').then((reg) => reg.update()).catch(console.error);
+  }
 }
 
 init();
